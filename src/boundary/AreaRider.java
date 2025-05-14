@@ -26,7 +26,7 @@ public class AreaRider {
 
             switch(scelta) {
                 case 1 -> visualizzaOrdini();
-                case 2 -> System.out.println("Completamento ordine non implementato.");
+                case 2 -> completaOrdine(scanner);
                 case 0 -> System.out.println("Uscita in corso...");
                 default -> System.out.println("Opzione non valida. Riprova.");
             }
@@ -71,6 +71,37 @@ public class AreaRider {
             System.out.println("Orario di Invio: " + orarioInvio);
             System.out.println("-------------------");
 
+        }
+    }
+
+    private void completaOrdine(Scanner scanner) {
+        List<String[]> ordini = dbManager.recuperaOrdiniRider(email);
+
+        if(ordini.isEmpty()) {
+            System.out.println("Nessun ordine disponibile.");
+            return;
+        }
+
+        System.out.println("\n== Ordini Assegnati ==");
+        for (int i = 0; i < ordini.size(); i++) {
+            String[] ordine = ordini.get(i);
+            System.out.println((i + 1) + ". Ristoratore: " + ordine[0] + ". Cliente: " + ordine[4] + " " + ordine[5]);
+        }
+
+        System.out.print("Seleziona l'ordine da completare (1-" + ordini.size() + ", 0 per annullare): ");
+        int scelta = Integer.parseInt(scanner.nextLine());
+
+        if (scelta > 0 && scelta <= ordini.size()) {
+            int ordineId = Integer.parseInt(ordini.get(scelta - 1)[10]);
+            if (dbManager.completaOrdine(ordineId)) {
+                System.out.println("Ordine completato con successo.");
+            } else {
+                System.out.println("Errore durante il completamento dell'ordine.");
+            }
+        } else if (scelta == 0) {
+            System.out.println("Operazione annullata.");
+        } else {
+            System.out.println("Scelta non valida.");
         }
     }
     

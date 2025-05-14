@@ -14,6 +14,7 @@ public class DataBaseManager {
         creaTabellaRistoratori();
         creaTabellaRiders();
         creaTabellaOrdini();
+        creaTabellaOrdiniCompletati();
     }
 
     private void creaTabellaUtenti() {
@@ -138,6 +139,31 @@ public class DataBaseManager {
             stmt.execute(sql);
         } catch (SQLException e) {
             System.out.println("Errore durante la creazione della tabella ordini: " + e.getMessage());
+        }
+    }
+
+    public void creaTabellaOrdiniCompletati() {
+        String sql = """
+                CREATE TABLE IF NOT EXISTS ordini_completati (
+                    idordine INTEGER PRIMARY KEY,
+                    email_ristoratore TEXT NOT NULL,
+                    email_cliente TEXT NOT NULL,
+                    email_rider TEXT NOT NULL,
+                    orario_inizio DATETIME NOT NULL,
+                    orario_fine DATETIME NOT NULL,
+                    FOREIGN KEY (idordine) REFERENCES ordini(idordine),
+                    FOREIGN KEY (email_ristoratore) REFERENCES ristoratori(email),
+                    FOREIGN KEY (email_cliente) REFERENCES clienti(email),
+                    FOREIGN KEY (email_rider) REFERENCES riders(email),
+                    FOREIGN KEY (orario_inizio) REFERENCES ordini(orario_inizio)
+                );
+                """;
+
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             Statement stmt = conn.createStatement()) {
+             stmt.execute(sql);
+        } catch (SQLException e) {
+            System.out.println("Errore durante la creazione della tabella ordini_completati: " + e.getMessage());
         }
     }
 
@@ -350,6 +376,7 @@ public class DataBaseManager {
     public List<String[]> recuperaOrdiniRider(String emailRider) {
         String sql = """
                 SELECT
+                    o.idordine,
                     r.nome AS nome_ristorante, r.indirizzo AS indirizzo_ristorante, r.cap AS cap_ristorante, r.telefono AS telefono_ristorante,
                     c.nome AS nome_cliente, c.cognome AS cognome_cliente, c.indirizzo AS indirizzo_cliente, c.cap AS cap_cliente, c.telefono AS telefono_cliente,
                     o.orario_inizio
@@ -378,13 +405,42 @@ public class DataBaseManager {
                     rs.getString("indirizzo_cliente"),
                     rs.getString("cap_cliente"),
                     rs.getString("telefono_cliente"),
-                    rs.getString("orario_inizio")
+                    rs.getString("orario_inizio"),
+                    String.valueOf(rs.getInt("idordine"))
                 });
             } 
         } catch (SQLException e) {
         System.err.println("Errore durante il recupero degli ordini del rider: " + e.getMessage());
         }
-        
+
         return ordini;
+    }
+
+    public boolean completaOrdine(int ordineId) {
+        String inserisciOrdineCompletato = """
+                INSERT INTO ordini_completati (idordine, email_ristoratore, email_cliente, email_rider, orario_inizio, orario_fine)
+                SELECT idordine, email_ristoratore, email_cliente, email_rider, orario_inizio, datetime('now')
+                FROM ordini
+                WHERE idordine = ?;
+                """;
+
+                String eliminaOrdine = "DELETE FROM ordini WHERE idordine = ?";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+            PreparedStatement pstmtInserisci = conn.prepareStatement(inserisciOrdineCompletato);
+            PreparedStatement pstmtElimina = conn.prepareStatement(eliminaOrdine)) {
+
+                pstmtInserisci.setInt(1, ordineId);
+                int rowsInserted = pstmtInserisci.executeUpdate();
+
+                if (rowsInserted > 0) {
+                    pstmtElimina.setInt(1, ordineId);
+                    pstmtElimina.executeUpdate();
+                    return true;
+                }
+        } catch (SQLException e) {
+            System.err.println("Errore durante il completamento dell'ordine: " + e.getMessage());
+        }
+        return false;
     }
 }
