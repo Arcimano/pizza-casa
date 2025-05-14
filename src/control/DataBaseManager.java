@@ -13,6 +13,7 @@ public class DataBaseManager {
         creaTabellaClienti();
         creaTabellaRistoratori();
         creaTabellaRiders();
+        creaTabellaOrdini();
     }
 
     private void creaTabellaUtenti() {
@@ -115,6 +116,28 @@ public class DataBaseManager {
              stmt.execute(sql);
         } catch (SQLException e) {
             System.out.println("Errore durante la creazione della tabella riders: " + e.getMessage());
+        }
+    }
+
+    public void creaTabellaOrdini() {
+        String sql = """
+                CREATE TABLE IF NOT EXISTS ordini (
+                    idordine INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email_ristoratore TEXT NOT NULL,
+                    email_cliente TEXT NOT NULL,
+                    email_rider TEXT NOT NULL,
+                    orario_inizio DATETIME NOT NULL,
+                    FOREIGN KEY (email_ristoratore) REFERENCES ristoratori(email),
+                    FOREIGN KEY (email_cliente) REFERENCES clienti(email),
+                    FOREIGN KEY (email_rider) REFERENCES riders(email)
+                );
+                """;
+
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+            Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+        } catch (SQLException e) {
+            System.out.println("Errore durante la creazione della tabella ordini: " + e.getMessage());
         }
     }
 
@@ -303,5 +326,65 @@ public class DataBaseManager {
             System.err.println("Errore durante la registrazione del rider: " + e.getMessage());
             return false;
         }
+    }
+
+    public boolean inviaOrdineAlRider(String emailRistoratore, String emailCliente, String emailRider) {
+        String sql = """
+                INSERT INTO ordini (email_ristoratore, email_cliente, email_rider, orario_inizio)
+                VALUES (?, ?, ?, datetime('now'));
+                """;
+
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, emailRistoratore);
+            pstmt.setString(2, emailCliente);
+            pstmt.setString(3, emailRider);
+            pstmt.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Errore durante l'invio dell'ordine al rider: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public List<String[]> recuperaOrdiniRider(String emailRider) {
+        String sql = """
+                SELECT
+                    r.nome AS nome_ristorante, r.indirizzo AS indirizzo_ristorante, r.cap AS cap_ristorante, r.telefono AS telefono_ristorante,
+                    c.nome AS nome_cliente, c.cognome AS cognome_cliente, c.indirizzo AS indirizzo_cliente, c.cap AS cap_cliente, c.telefono AS telefono_cliente,
+                    o.orario_inizio
+                FROM ordini o
+                JOIN ristoratori r ON o.email_ristoratore = r.email
+                JOIN clienti c ON o.email_cliente = c.email
+                WHERE o.email_rider = ?;
+                ORDER BY o.orario_inizio DESC;
+                """;
+
+        List<String[]> ordini = new ArrayList<>();
+
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, emailRider);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                ordini.add(new String[]{
+                    rs.getString("nome_ristorante"),
+                    rs.getString("indirizzo_ristorante"),
+                    rs.getString("cap_ristorante"),
+                    rs.getString("telefono_ristorante"),
+                    rs.getString("nome_cliente"),
+                    rs.getString("cognome_cliente"),
+                    rs.getString("indirizzo_cliente"),
+                    rs.getString("cap_cliente"),
+                    rs.getString("telefono_cliente"),
+                    rs.getString("orario_inizio")
+                });
+            } 
+        } catch (SQLException e) {
+        System.err.println("Errore durante il recupero degli ordini del rider: " + e.getMessage());
+        }
+        
+        return ordini;
     }
 }
