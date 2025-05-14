@@ -12,6 +12,7 @@ public class DataBaseManager {
         creaTabellaRegistrazioni();
         creaTabellaClienti();
         creaTabellaRistoratori();
+        creaTabellaRiders();
     }
 
     private void creaTabellaUtenti() {
@@ -49,7 +50,7 @@ public class DataBaseManager {
              Statement stmt = conn.createStatement()) {
              stmt.execute(sql);
         } catch (SQLException e) {
-            System.out.println("Errore durante la creazione della tabella utenti: " + e.getMessage());
+            System.out.println("Errore durante la creazione della tabella registrazioni: " + e.getMessage());
         }
     }
 
@@ -71,7 +72,7 @@ public class DataBaseManager {
              Statement stmt = conn.createStatement()) {
              stmt.execute(sql);
         } catch (SQLException e) {
-            System.out.println("Errore durante la creazione della tabella utenti: " + e.getMessage());
+            System.out.println("Errore durante la creazione della tabella clienti: " + e.getMessage());
         }
     }
 
@@ -93,7 +94,27 @@ public class DataBaseManager {
              Statement stmt = conn.createStatement()) {
              stmt.execute(sql);
         } catch (SQLException e) {
-            System.out.println("Errore durante la creazione della tabella utenti: " + e.getMessage());
+            System.out.println("Errore durante la creazione della tabella ristoratori: " + e.getMessage());
+        }
+    }
+
+    private void creaTabellaRiders() {
+        String sql = """
+                CREATE TABLE IF NOT EXISTS riders (
+                    email TEXT PRIMARY KEY,
+                    nome TEXT NOT NULL,
+                    cognome TEXT NOT NULL,
+                    telefono TEXT NOT NULL,
+                    cap TEXT NOT NULL,
+                    FOREIGN KEY (email) REFERENCES utenti(email)
+                );
+                """;
+
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             Statement stmt = conn.createStatement()) {
+             stmt.execute(sql);
+        } catch (SQLException e) {
+            System.out.println("Errore durante la creazione della tabella riders: " + e.getMessage());
         }
     }
 
@@ -253,6 +274,33 @@ public class DataBaseManager {
 
         } catch (SQLException e) {
             System.err.println("Errore durante la registrazione del cliente: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean registraRider(String email, String password, String nome, String cognome, String telefono, String cap) {
+        String sqlUtenti = "INSERT INTO utenti (email, password, tipo_utente) VALUES (?, ?, 'rider')";
+        String sqlRiders = """
+                INSERT INTO riders (email, nome, cognome, telefono, cap)
+                VALUES (?, ?, ?, ?, ?);
+                """;
+
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+            PreparedStatement pstmtUtenti = conn.prepareStatement(sqlUtenti);
+            PreparedStatement pstmtRiders = conn.prepareStatement(sqlRiders)) {
+            pstmtUtenti.setString(1, email);
+            pstmtUtenti.setString(2, password);
+            pstmtUtenti.executeUpdate();
+
+            pstmtRiders.setString(1, email);
+            pstmtRiders.setString(2, nome);
+            pstmtRiders.setString(3, cognome);
+            pstmtRiders.setString(4, telefono);
+            pstmtRiders.setString(5, cap);
+            pstmtRiders.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Errore durante la registrazione del rider: " + e.getMessage());
             return false;
         }
     }

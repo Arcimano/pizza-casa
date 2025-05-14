@@ -127,14 +127,16 @@ public class MenuPrincipale {
         do {
             System.out.println("\n== Area Gestore ==");
             System.out.println("1. Visualizza richieste di registrazione.");
-            System.out.println("2. Visualizza report mensile.");
+            System.out.println("2. Aggiungi nuovo rider.");
+            System.out.println("3. Visualizza report mensile.");
             System.out.println("0. Esci dall'area gestore.");
             System.out.println("Scegli un'opzione: ");
             scelta = Integer.parseInt(scanner.nextLine());
 
             switch (scelta) {
                 case 1 -> visualizzaRichiesteRegistrazione();
-                case 2 -> visualizzaReportMensile();
+                case 2 -> aggiungiRider();
+                case 3 -> visualizzaReportMensile();
                 case 0 -> System.out.println("Uscita dall'area gestore in corso...");
                 default -> System.out.println("Opzione non valida. Riprova.");
             }
@@ -178,6 +180,28 @@ public class MenuPrincipale {
             } else {
                 System.out.println("Opzione non valida. Nessuna azione eseguita.");
             }
+        }
+    }
+
+    private void aggiungiRider() {
+        System.out.println("\n== Aggiungi Nuovo Rider ==");
+        System.out.print("Inserisci l'email del rider: ");
+        String email = scanner.nextLine();
+        System.out.print("Inserisci la password del rider: ");
+        String password = scanner.nextLine();
+        System.out.print("Inserisci il nome del rider: ");
+        String nome = scanner.nextLine();
+        System.out.print("Inserisci il cognome del rider: ");
+        String cognome = scanner.nextLine();
+        System.out.print("Inserisci il numero di telefono del rider: ");
+        String telefono = scanner.nextLine();
+        System.out.print("Inserisci il CAP del rider: ");
+        String cap = scanner.nextLine();
+
+        if (dbManager.registraRider(email, password, nome, cognome, telefono, cap)) {
+            System.out.println("Rider aggiunto con successo.");
+        } else {
+            System.out.println("Errore durante l'aggiunta del rider. Riprova.");
         }
     }
 
